@@ -742,7 +742,7 @@ static pipecmd *add_roff_line_length (pipecmd *cmd, bool *save_cat_p)
 		pipecmd_argf (cmd, "-rLL=%dn", length);
 		pipecmd_argf (cmd, "-rLT=%dn", length);
 #elif defined(HEIRLOOM_NROFF)
-		name = xasprintf ("echo .ll %dn && echo .lt %dn",
+		name = xasprintf ("echo .ll %dn && echo .lt %dn && echo .lf 1",
 				  length, length);
 		lldata = xasprintf ("%d", length);
 		llcmd = pipecmd_new_function (name, heirloom_line_length, free,
@@ -798,6 +798,10 @@ static void do_extern (int argc, char *argv[])
 	/* Please keep these in the same order as they are in whatis.c. */
 	if (debug_level)
 		pipecmd_arg (cmd, "-d");
+	if (regex_opt)
+		pipecmd_arg (cmd, "-r");
+	if (wildcard)
+		pipecmd_arg (cmd, "-w");
 	if (local_man_file)  /* actually apropos/whatis --long */
 		pipecmd_arg (cmd, "-l");
 	if (colon_sep_section_list)
@@ -1418,6 +1422,12 @@ static pipeline *make_roff_command (const char *dir, const char *file,
 				pipeline_command (p, seq);
 		}
 #endif /* TROFF_IS_GROFF || HEIRLOOM_NROFF */
+
+#ifdef TROFF_IS_GROFF
+		/* See also display () for the more complex non-groff case. */
+		if (!recode && no_hyphenation)
+			pipecmd_argf (cmd, "-rHY=0");
+#endif /* !TROFF_IS_GROFF */
 
 #ifdef NROFF_WARNINGS
 		GL_LIST_FOREACH (roff_warnings, warning)
@@ -2118,6 +2128,7 @@ static void display_catman (const char *cat_file, decompress *d,
 	free (tmpcat);
 }
 
+#ifndef TROFF_IS_GROFF
 static void disable_hyphenation (void *data MAYBE_UNUSED)
 {
 	fputs (".nh\n"
@@ -2125,12 +2136,17 @@ static void disable_hyphenation (void *data MAYBE_UNUSED)
 	       "..\n"
 	       ".lf 1\n", stdout);
 }
+#endif /* TROFF_IS_GROFF */
 
 static void disable_justification (void *data MAYBE_UNUSED)
 {
-	fputs (".na\n"
-	       ".de ad\n"
-	       "..\n"
+	fputs (".ie (\\n(.g&((\\n(.x>1):((\\n(.x==1)&(\\n(.y>=23))))"
+	       " .ds AD l\n"
+	       ".el \\{\\\n"
+	       ".  na\n"
+	       ".  de ad\n"
+	       ".  .\n"
+	       ".\\}\n"
 	       ".lf 1\n", stdout);
 }
 
@@ -2241,17 +2257,27 @@ static int display (const char *dir, const char *man_file,
 		else
 			decomp = decompress_fdopen (dup (STDIN_FILENO));
 
+#ifndef TROFF_IS_GROFF
+		/* See also make_roff_command () for the simpler groff case. */
 		if (!recode && no_hyphenation) {
 			pipecmd *hcmd = pipecmd_new_function (
-				"echo .nh && echo .de hy && echo ..",
+				"echo .nh && echo .de hy && echo .. && "
+				"echo .lf 1",
 				disable_hyphenation, NULL, NULL);
 			pipecmd_sequence_command (seq, hcmd);
 			++prefixes;
 		}
+#endif /* TROFF_IS_GROFF */
 
 		if (!recode && no_justification) {
 			pipecmd *jcmd = pipecmd_new_function (
-				"echo .na && echo .de ad && echo ..",
+#ifdef TROFF_IS_GROFF
+				/* Technically only for groff >= 1.23.0. */
+				"echo .ds AD l && echo .lf 1",
+#else /* !TROFF_IS_GROFF */
+				"echo .na && echo .de ad && echo .. && "
+				"echo .lf 1",
+#endif /* TROFF_IS_GROFF */
 				disable_justification, NULL, NULL);
 			pipecmd_sequence_command (seq, jcmd);
 			++prefixes;
@@ -2271,7 +2297,8 @@ static int display (const char *dir, const char *man_file,
 				pipecmd *lcmd;
 
 				unpack_locale_bits (page_lang, &bits);
-				name = xasprintf ("echo .mso %s.tmac",
+				name = xasprintf ("echo .mso %s.tmac && "
+						  "echo .lf 1",
 						  bits.language);
 				lcmd = pipecmd_new_function (
 					name, locale_macros, free,

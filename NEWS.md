@@ -1,15 +1,31 @@
 man-db 2.11.3
 =============
 
+Fixes:
+
+ * Fix some manual page portability issues with groff 1.23.0.
+ * Fix test failures when a working `iconv` is not available.
+ * Ensure that timestamps read from the database can go past the year 2038,
+   even on systems where this is not the default.
+
 Improvements:
 
  * Update system call lists in `seccomp` sandbox from `systemd`.
- * Upgrade to Gnulib `stable-202301`.
+ * Upgrade to Gnulib `stable-202307`.
  * Work around the Firebuild accelerator in `seccomp` sandbox: if this is in
    use then we need to allow some socket-related system calls.
  * `man -K` now deduplicates search results that point to the same page.
  * Warn if `mandb` drops to `--user-db` mode due to running as the wrong
    user.
+ * Change section title recommendations in `man(1)` to mention `STANDARDS`
+   rather than `CONFORMING TO`, in line with `man-pages(7)`.
+ * Add a `STANDARDS` section to `man(1)` itself.
+ * Document that `man -K` may suffer from false negatives as well as false
+   positives.
+ * Take advantage of newer `groff` facilities to implement `man
+   --no-hyphenation` and `man --no-justification`, if available.
+ * `man -f` and `man -k` now pass any `-r`/`--regex` or `-w`/`--wildcard`
+   options on to `whatis` and `apropos` respectively.
 
 man-db 2.11.2 (8 January 2023)
 ==============================
