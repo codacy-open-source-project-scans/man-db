@@ -1,4 +1,4 @@
-man-db 2.11.3
+man-db 2.12.0
 =============
 
 Fixes:
@@ -7,6 +7,10 @@ Fixes:
  * Fix test failures when a working `iconv` is not available.
  * Ensure that timestamps read from the database can go past the year 2038,
    even on systems where this is not the default.
+ * Fix `manpath` not parsing `PATH` entries with trailing slash correctly
+   for guessing `MANPATH` entries.
+ * More accurately document the behaviour of passing file names as arguments
+   to `man` without the `-l`/`--local-file` option.
 
 Improvements:
 
@@ -26,6 +30,10 @@ Improvements:
    --no-hyphenation` and `man --no-justification`, if available.
  * `man -f` and `man -k` now pass any `-r`/`--regex` or `-w`/`--wildcard`
    options on to `whatis` and `apropos` respectively.
+ * Always pass a line length to `nroff`, even if we believe that it matches
+   the default.
+ * Allow disabling `groff` warnings via `man --warnings`, by prefixing a
+   warning name with `!`.
 
 man-db 2.11.2 (8 January 2023)
 ==============================

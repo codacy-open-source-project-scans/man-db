@@ -685,8 +685,7 @@ static int get_roff_line_length (void)
 {
 	int line_length = cat_width ? cat_width : get_line_length ();
 
-	/* groff >= 1.18 defaults to 78. */
-	if ((!troff || ditroff) && line_length != 80) {
+	if (!troff || ditroff) {
 		int length = line_length * 39 / 40;
 		if (length > line_length - 2)
 			return line_length - 2;
@@ -1430,8 +1429,12 @@ static pipeline *make_roff_command (const char *dir, const char *file,
 #endif /* !TROFF_IS_GROFF */
 
 #ifdef NROFF_WARNINGS
-		GL_LIST_FOREACH (roff_warnings, warning)
-			pipecmd_argf (cmd, "-w%s", warning);
+		GL_LIST_FOREACH (roff_warnings, warning) {
+			if (warning[0] == '!')
+				pipecmd_argf (cmd, "-W%s", warning + 1);
+			else
+				pipecmd_argf (cmd, "-w%s", warning);
+		}
 #endif /* NROFF_WARNINGS */
 
 #ifdef HEIRLOOM_NROFF
